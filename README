@@ -28,7 +28,7 @@ Stack: Java 17 · WPILib 2025 (command-based) · CTRE Phoenix 6 · PathPlanner �
 
 ```
 Driver/Operator input (Controls)          PathPlanner autos
-            │                                     │
+            │                                      │
             └──────────►  RobotCommands  ◄────────┘      (named commands)
                               │
                      flags.check(RobotFlag)
@@ -45,6 +45,39 @@ Driver/Operator input (Controls)          PathPlanner autos
 ```
 
 Each subsystem follows the same pattern: an enum of states, a small class of setpoints/speeds, and a subsystem whose `afterTransition()` applies the output for the state it just entered.
+
+```mermaid
+stateDiagram-v2
+    [*] --> IDLE
+    IDLE --> PREPARE_INTAKE : intake request
+    IDLE --> PREPARE_CORAL_STATION_INTAKE : coral station request
+    IDLE --> PREPARE_L1_ROW_2 : L1 row 2 request
+    IDLE --> PREPARE_CLIMB : deploy climb request
+
+    PREPARE_INTAKE --> INTAKE : wrist at goal
+    PREPARE_CORAL_STATION_INTAKE --> CORAL_STATION_INTAKE : wrist at goal
+
+    INTAKE --> PREPARE_L1_ROW_1 : coral detected
+    CORAL_STATION_INTAKE --> PREPARE_L1_ROW_1 : coral detected
+
+    PREPARE_L1_ROW_1 --> WAIT_L1_ROW_1 : wrist at goal
+    WAIT_L1_ROW_1 --> SCORE_L1_ROW_1 : score request
+    SCORE_L1_ROW_1 --> PREPARE_IDLE : 2 s timeout
+
+    PREPARE_L1_ROW_2 --> WAIT_L1_ROW_2 : wrist at goal
+    WAIT_L1_ROW_2 --> SCORE_L1_ROW_2 : score request
+    SCORE_L1_ROW_2 --> PREPARE_IDLE : 2 s timeout
+
+    PREPARE_IDLE --> IDLE : wrist at goal
+
+    PREPARE_CLIMB --> CLIMB_WAIT : 0.25 s timeout
+
+    CLIMB_WAIT --> CLIMB : climb request
+    CLIMB --> CLIMB_WAIT : climb wait request
+
+    CLIMB_WAIT --> UNCLIMB : unclimb request
+    UNCLIMB --> CLIMB_WAIT : climb wait request
+```
 
 ### Repository layout
 
