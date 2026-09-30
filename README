@@ -1,0 +1,107 @@
+# K2025: Kitbot Swerve Test Robot (FRC 2025 Reefscape)
+
+Java robot code for Team 498's 2025 FRC REEFSCAPE test robot: a kitbot-style build on a swerve drive base, used during the early weeks of build season as a software testbed while the competition robot was being built.
+
+The main goal was to prove that a state-machine superstructure architecture could command real motors correctly before the real mechanisms existed. The intake, wrist, and climber were software "skeletons" wired to stand-in motors on the test base, so the state logic could be verified on hardware without waiting on the main robot. These subsystems did not actually have mechanisms affiliated with them on the actual physical robot.
+
+Stack: Java 17 · WPILib 2025 (command-based) · CTRE Phoenix 6 · PathPlanner · DogLog · Limelight
+
+---
+
+## Highlights
+
+- Hierarchical state machines: a generic `StateMachine<S extends Enum<S>>` base class handles state transitions, entry actions (`afterTransition`), and timeouts. Every subsystem is its own state machine, coordinated by a top-level `RobotManager` with 16 robot states.
+- Flag-based requests: driver inputs and autonomous commands never touch mechanisms directly. They raise request flags (`FlagManager`), and the manager resolves them once per loop into a state transition. This keeps button handling, autos, and mechanism control cleanly separated.
+- Sensor-driven transitions: coral pickup is detected from roller stator current (stall detection) instead of a dedicated sensor, and the "wrist" uses Motion Magic closed-loop position control with an arm-cosine gravity term and a mirrored follower motor.
+- PathPlanner autonomous routines: four autos built from named commands that map directly onto state-machine requests (intake, l1 row 1, score, return to idle, and wait for ... synchronization commands):
+  - 1 Coral Blind Middle
+  - 2.5 Coral Blind Processor Side
+  - 2.5 Coral Blind Non-Processor Side
+  - 5 coral (five-scoring-cycle sequence)
+- Swerve drivetrain: Phoenix 6 / Tuner X-generated swerve with field-centric driving, cubic joystick response curves, and a PathPlanner-integrated drivetrain subsystem.
+- Vision groundwork: a two-camera Limelight MegaTag 2 pose-fusion class with rejection logic (no tags seen, robot moving in teleop). It's written but not enabled, because we never had enough cameras to run it.
+- Structured logging: state, flags, motor current, and setpoints are logged through DogLog for post-run debugging in AdvantageScope.
+
+---
+
+## Architecture
+
+```
+Driver/Operator input (Controls)          PathPlanner autos
+            │                                     │
+            └──────────►  RobotCommands  ◄────────┘      (named commands)
+                              │
+                     flags.check(RobotFlag)
+                              │
+                              ▼
+                    RobotManager (16 states)
+              resolves flags + sensor conditions each loop
+                              │
+        ┌─────────────────────┼─────────────────────┐
+        ▼                     ▼                     ▼
+  IntakeRollers          IntakeWrist             Climber
+  (state machine)       (state machine)       (state machine)
+   stall detect         Motion Magic           open-loop speeds
+```
+
+Each subsystem follows the same pattern: an enum of states, a small class of setpoints/speeds, and a subsystem whose `afterTransition()` applies the output for the state it just entered.
+
+### Repository layout
+
+```
+src/main/java/frc/robot/
+├── Robot.java                 # Robot lifecycle, auto chooser, PathPlanner named commands
+├── Controls.java              # Driver/operator bindings and swerve drive control
+├── Constants.java, Ports.java # Tuning constants and CAN IDs
+├── stateMachine/              # StateMachine base, RobotManager, RobotState, flags
+├── commands/                  # RobotCommands (request + wait-for-state commands)
+├── subsystems/
+│   ├── drivetrain/            # Swerve drivetrain (Tuner X constants + PathPlanner config)
+│   ├── intakeRollers/         # Roller state machine + current-based coral detection
+│   ├── intakeWrist/           # Wrist state machine, Motion Magic position control
+│   ├── climber/               # Climber state machine
+│   └── LED/                   # LED status scaffolding (unfinished)
+├── vision/                    # Limelight helpers + MegaTag 2 localization (not enabled)
+└── drivers/, Util/            # Xbox controller wrapper, rotation helpers
+src/main/deploy/pathplanner/   # Paths and autos
+```
+
+---
+
+## Project status & honest scope
+
+This was a training and validation robot, not a competition robot, and it never ran at an official event. It ran in our shop and on the practice field, including a demo run in May 2025, and was used to train programmers to get accustomed to programming around this game specifically.
+
+- The intake, wrist, and climber never physically existed on this robot. They were stand-ins to confirm the state machine commands the right motors in the right order.
+- Wrist setpoints are placeholders (all 0), because the real mechanism was never built on this platform.
+- Vision is not enabled. Limelight code is included but unused due to resource constraints.
+- The operator controller bindings are defined but not registered in `robotInit`, and the LED subsystem is scaffolding only.
+
+### Known issues / what I'd do next
+
+- `RobotManager.getNextState()` applies flag requests to the working state but returns a separate `nextState`. As a result, `PREPARE_*` entry actions can be skipped, and a request can be dropped if the wrist isn't at its current goal. I'd refactor it so requests resolve to an explicit target state before sensor-based transitions run.
+- The `L1_ROW_2` flag currently routes to the `PREPARE_L1_ROW_1` state, and operator button A is bound to both L1 presets. Both need separating, even if they're functionally the same.
+- Add unit tests for the state machine transitions using WPILib simulation, and tune real wrist setpoints once hardware exists.
+
+---
+
+## Build & run
+
+Requires the [WPILib 2025](https://docs.wpilib.org/) toolchain (JDK 17).
+
+```bash
+./gradlew build          # compile
+./gradlew simulateJava   # run in WPILib simulation
+./gradlew deploy         # deploy to a roboRIO
+```
+
+---
+
+## Credits
+
+- Swerve constants generated with CTRE **Tuner X**; `LimelightHelpers.java` is the standard Limelight library.
+- Uses [PathPlannerLib](https://pathplanner.dev/), [DogLog](https://doglog.dev/), and CTRE Phoenix 6.
+
+## About
+
+Built by Stephenjoy Tamasi, Computer Systems Engineering student at Arizona State University, as programming lead of 498 Robotics. Interested in robotics, embedded systems, and controls software.
