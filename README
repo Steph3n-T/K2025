@@ -52,39 +52,32 @@ Each subsystem follows the same pattern: an enum of states, a small class of set
 flowchart TD
     START((start)) --> IDLE
 
-    subgraph CORAL["Intake and L1 scoring"]
-        direction TB
-        PREPARE_INTAKE -->|"wrist at goal"| INTAKE
-        PREPARE_CORAL_STATION_INTAKE -->|"wrist at goal"| CORAL_STATION_INTAKE
-
-        PREPARE_L1_ROW_1 -->|"wrist at goal"| WAIT_L1_ROW_1
-        WAIT_L1_ROW_1 -->|"score request"| SCORE_L1_ROW_1
-
-        PREPARE_L1_ROW_2 -->|"wrist at goal"| WAIT_L1_ROW_2
-        WAIT_L1_ROW_2 -->|"score request"| SCORE_L1_ROW_2
-    end
-
-    subgraph CLIMBING["Climb"]
-        direction TB
-        PREPARE_CLIMB -->|"0.25 s timeout"| CLIMB_WAIT
-        CLIMB_WAIT -->|"climb request"| CLIMB
-        CLIMB -->|"climb wait request"| CLIMB_WAIT
-        CLIMB_WAIT -->|"unclimb request"| UNCLIMB
-        UNCLIMB -->|"climb wait request"| CLIMB_WAIT
-    end
-
     IDLE -->|"intake request"| PREPARE_INTAKE
     IDLE -->|"coral station request"| PREPARE_CORAL_STATION_INTAKE
     IDLE -->|"L1 row 1 request"| PREPARE_L1_ROW_1
     IDLE -->|"L1 row 2 request"| PREPARE_L1_ROW_2
     IDLE -->|"deploy climb request"| PREPARE_CLIMB
 
+    PREPARE_INTAKE -->|"wrist at goal"| INTAKE
+    PREPARE_CORAL_STATION_INTAKE -->|"wrist at goal"| CORAL_STATION_INTAKE
     INTAKE -->|"coral detected"| PREPARE_L1_ROW_1
     CORAL_STATION_INTAKE -->|"coral detected"| PREPARE_L1_ROW_1
 
+    PREPARE_L1_ROW_1 -->|"wrist at goal"| WAIT_L1_ROW_1
+    WAIT_L1_ROW_1 -->|"score request"| SCORE_L1_ROW_1
     SCORE_L1_ROW_1 -->|"2 s timeout"| PREPARE_IDLE
+
+    PREPARE_L1_ROW_2 -->|"wrist at goal"| WAIT_L1_ROW_2
+    WAIT_L1_ROW_2 -->|"score request"| SCORE_L1_ROW_2
     SCORE_L1_ROW_2 -->|"2 s timeout"| PREPARE_IDLE
+
     PREPARE_IDLE -->|"wrist at goal"| IDLE
+
+    PREPARE_CLIMB -->|"0.25 s timeout"| CLIMB_WAIT
+    CLIMB_WAIT -->|"climb request"| CLIMB
+    CLIMB -->|"climb wait request"| CLIMB_WAIT
+    CLIMB_WAIT -->|"unclimb request"| UNCLIMB
+    UNCLIMB -->|"climb wait request"| CLIMB_WAIT
 
     classDef rest fill:#e8f0fe,stroke:#4a6fa5,color:#1a1a1a
     classDef prepare fill:#fff4d6,stroke:#b8860b,color:#1a1a1a
