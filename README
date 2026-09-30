@@ -4,7 +4,7 @@ Java robot code for Team 498's 2025 FRC REEFSCAPE test robot: a kitbot-style bui
 
 The main goal was to prove that a state-machine superstructure architecture could command real motors correctly before the real mechanisms existed. The intake, wrist, and climber were software "skeletons" wired to stand-in motors on the test base, so the state logic could be verified on hardware without waiting on the main robot. These subsystems did not actually have mechanisms affiliated with them on the actual physical robot.
 
-Stack: Java 17 · WPILib 2025 (command-based) · CTRE Phoenix 6 · PathPlanner · DogLog · Limelight
+Stack: Java 17 · WPILib 2025 (command-based) · CTRE Phoenix 6 · PathPlanner · DogLog · Limelight (vision code included, not enabled)
 
 ---
 
@@ -38,108 +38,4 @@ Driver/Operator input (Controls)          PathPlanner autos
               resolves flags + sensor conditions each loop
                               │
         ┌─────────────────────┼─────────────────────┐
-        ▼                     ▼                     ▼
-  IntakeRollers          IntakeWrist             Climber
-  (state machine)       (state machine)       (state machine)
-   stall detect         Motion Magic           open-loop speeds
-```
-
-Each subsystem follows the same pattern: an enum of states, a small class of setpoints/speeds, and a subsystem whose `afterTransition()` applies the output for the state it just entered.
-
-### State flow
-
-```mermaid
-stateDiagram-v2
-    [*] --> IDLE
-    IDLE --> PREPARE_INTAKE : intake request
-    IDLE --> PREPARE_CORAL_STATION_INTAKE : coral station request
-    IDLE --> PREPARE_L1_ROW_1 : L1 row 1 request
-    IDLE --> PREPARE_L1_ROW_2 : L1 row 2 request
-    IDLE --> PREPARE_CLIMB : deploy climb request
-
-    PREPARE_INTAKE --> INTAKE : wrist at goal
-    PREPARE_CORAL_STATION_INTAKE --> CORAL_STATION_INTAKE : wrist at goal
-
-    INTAKE --> PREPARE_L1_ROW_1 : coral detected
-    CORAL_STATION_INTAKE --> PREPARE_L1_ROW_1 : coral detected
-
-    PREPARE_L1_ROW_1 --> WAIT_L1_ROW_1 : wrist at goal
-    WAIT_L1_ROW_1 --> SCORE_L1_ROW_1 : score request
-    SCORE_L1_ROW_1 --> PREPARE_IDLE : 2 s timeout
-
-    PREPARE_L1_ROW_2 --> WAIT_L1_ROW_2 : wrist at goal
-    WAIT_L1_ROW_2 --> SCORE_L1_ROW_2 : score request
-    SCORE_L1_ROW_2 --> PREPARE_IDLE : 2 s timeout
-
-    PREPARE_IDLE --> IDLE : wrist at goal
-
-    PREPARE_CLIMB --> CLIMB_WAIT : 0.25 s timeout
-
-    CLIMB_WAIT --> CLIMB : climb request
-    CLIMB --> CLIMB_WAIT : climb wait request
-
-    CLIMB_WAIT --> UNCLIMB : unclimb request
-    UNCLIMB --> CLIMB_WAIT : climb wait request
-```
-
-Intended state flow. In the current code, the Row 2 request routes to Row 1 (see Known issues below).
-
-### Repository layout
-
-```
-src/main/java/frc/robot/
-├── Robot.java                 # Robot lifecycle, auto chooser, PathPlanner named commands
-├── Controls.java              # Driver/operator bindings and swerve drive control
-├── Constants.java, Ports.java # Tuning constants and CAN IDs
-├── stateMachine/              # StateMachine base, RobotManager, RobotState, flags
-├── commands/                  # RobotCommands (request + wait-for-state commands)
-├── subsystems/
-│   ├── drivetrain/            # Swerve drivetrain (Tuner X constants + PathPlanner config)
-│   ├── intakeRollers/         # Roller state machine + current-based coral detection
-│   ├── intakeWrist/           # Wrist state machine, Motion Magic position control
-│   ├── climber/               # Climber state machine
-│   └── LED/                   # LED status scaffolding (unfinished)
-├── vision/                    # Limelight helpers + MegaTag 2 localization (not enabled)
-└── drivers/, Util/            # Xbox controller wrapper, rotation helpers
-src/main/deploy/pathplanner/   # Paths and autos
-```
-
----
-
-## Project status & honest scope
-
-This was a training and validation robot, not a competition robot, and it never ran at an official event. It ran in our shop and on the practice field, including a demo run in May 2025, and was used to train programmers to get accustomed to programming around this game specifically.
-
-- The intake, wrist, and climber never physically existed on this robot. They were stand-ins to confirm the state machine commands the right motors in the right order.
-- Wrist setpoints are placeholders (all 0), because the real mechanism was never built on this platform.
-- Vision is not enabled. Limelight code is included but unused due to resource constraints.
-- The operator controller bindings are defined but not registered in `robotInit`, and the LED subsystem is scaffolding only.
-
-### Known issues / what I'd do next
-
-- `RobotManager.getNextState()` applies flag requests to the working state but returns a separate `nextState`. As a result, `PREPARE_*` entry actions can be skipped, and a request can be dropped if the wrist isn't at its current goal. I'd refactor it so requests resolve to an explicit target state before sensor-based transitions run.
-- The `L1_ROW_2` flag currently routes to the `PREPARE_L1_ROW_1` state, and operator button A is bound to both L1 presets. Both need separating, even if they're functionally the same.
-- Add unit tests for the state machine transitions using WPILib simulation, and tune real wrist setpoints once hardware exists.
-
----
-
-## Build & run
-
-Requires the [WPILib 2025](https://docs.wpilib.org/) toolchain (JDK 17).
-
-```bash
-./gradlew build          # compile
-./gradlew simulateJava   # run in WPILib simulation
-./gradlew deploy         # deploy to a roboRIO
-```
-
----
-
-## Credits
-
-- Swerve constants generated with CTRE Tuner X; `LimelightHelpers.java` is the standard Limelight library.
-- Uses [PathPlannerLib](https://pathplanner.dev/), [DogLog](https://doglog.dev/), and CTRE Phoenix 6.
-
-## About
-
-Built by Stephenjoy Tamasi, Computer Systems Engineering student at Arizona State University, as programming lead of 498 Robotics. Interested in robotics, embedded systems, and controls software.
+        ▼                     ▼
