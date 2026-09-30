@@ -51,8 +51,10 @@ stateDiagram-v2
     [*] --> IDLE
     IDLE --> PREPARE_INTAKE : intake request
     IDLE --> PREPARE_CORAL_STATION_INTAKE : coral station request
+    IDLE --> PREPARE_L1_ROW_1 : L1 row 1 request
     IDLE --> PREPARE_L1_ROW_2 : L1 row 2 request
     IDLE --> PREPARE_CLIMB : deploy climb request
+
 
     PREPARE_INTAKE --> INTAKE : wrist at goal
     PREPARE_CORAL_STATION_INTAKE --> CORAL_STATION_INTAKE : wrist at goal
