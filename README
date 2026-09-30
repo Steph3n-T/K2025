@@ -28,7 +28,7 @@ Stack: Java 17 · WPILib 2025 (command-based) · CTRE Phoenix 6 · PathPlanner �
 
 ```
 Driver/Operator input (Controls)          PathPlanner autos
-            │                                      │
+            │                                     │
             └──────────►  RobotCommands  ◄────────┘      (named commands)
                               │
                      flags.check(RobotFlag)
@@ -46,6 +46,8 @@ Driver/Operator input (Controls)          PathPlanner autos
 
 Each subsystem follows the same pattern: an enum of states, a small class of setpoints/speeds, and a subsystem whose `afterTransition()` applies the output for the state it just entered.
 
+### State flow
+
 ```mermaid
 stateDiagram-v2
     [*] --> IDLE
@@ -54,7 +56,6 @@ stateDiagram-v2
     IDLE --> PREPARE_L1_ROW_1 : L1 row 1 request
     IDLE --> PREPARE_L1_ROW_2 : L1 row 2 request
     IDLE --> PREPARE_CLIMB : deploy climb request
-
 
     PREPARE_INTAKE --> INTAKE : wrist at goal
     PREPARE_CORAL_STATION_INTAKE --> CORAL_STATION_INTAKE : wrist at goal
@@ -80,6 +81,8 @@ stateDiagram-v2
     CLIMB_WAIT --> UNCLIMB : unclimb request
     UNCLIMB --> CLIMB_WAIT : climb wait request
 ```
+
+Intended state flow. In the current code, the Row 2 request routes to Row 1 (see Known issues below).
 
 ### Repository layout
 
@@ -134,7 +137,7 @@ Requires the [WPILib 2025](https://docs.wpilib.org/) toolchain (JDK 17).
 
 ## Credits
 
-- Swerve constants generated with CTRE **Tuner X**; `LimelightHelpers.java` is the standard Limelight library.
+- Swerve constants generated with CTRE Tuner X; `LimelightHelpers.java` is the standard Limelight library.
 - Uses [PathPlannerLib](https://pathplanner.dev/), [DogLog](https://doglog.dev/), and CTRE Phoenix 6.
 
 ## About
